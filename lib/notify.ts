@@ -41,9 +41,13 @@ export async function notifyTelegram(reservation: Reservation, car: Car) {
     lines.push(`📉 Remise demandée: −${discount}%`);
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mlika-rental.vercel.app";
+
   lines.push(
     ``,
     `⏳ *Statut:* En attente de confirmation`,
+    ``,
+    `🌐 [Voir le site](${siteUrl}) · [Admin](${siteUrl}/admin)`,
   );
 
   const inline_keyboard = [

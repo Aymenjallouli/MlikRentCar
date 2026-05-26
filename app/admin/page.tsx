@@ -101,7 +101,7 @@ function CloudinaryUpload({ token, onUploaded }: { token: string; onUploaded: (u
   );
 }
 
-type Tab = "reservations" | "fleet" | "add-car";
+type Tab = "reservations" | "fleet" | "add-car" | "settings";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b",
@@ -151,6 +151,34 @@ export default function AdminPage() {
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [carSaving, setCarSaving] = useState(false);
   const [carMsg, setCarMsg] = useState("");
+
+  // Password change
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const changePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwNew !== pwConfirm) { setPwMsg({ ok: false, text: "Les mots de passe ne correspondent pas." }); return; }
+    if (pwNew.length < 4) { setPwMsg({ ok: false, text: "Mot de passe trop court (min 4 caractères)." }); return; }
+    setPwSaving(true);
+    setPwMsg(null);
+    const res = await fetch("/api/admin/login", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-admin-token": token },
+      body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPwMsg({ ok: true, text: "✓ Mot de passe mis à jour." });
+      setPwCurrent(""); setPwNew(""); setPwConfirm("");
+    } else {
+      setPwMsg({ ok: false, text: data.error ?? "Erreur." });
+    }
+    setPwSaving(false);
+  };
 
   const headers = { "Content-Type": "application/json", "x-admin-token": token };
 
@@ -343,31 +371,33 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0c0c0c" }}>
-      {/* Top bar */}
+      {/* Top bar — brand fixed left | tabs scrollable | actions fixed right */}
       <div
         style={{
           background: "#050505",
           borderBottom: "1px solid #1b1b1b",
-          padding: "0 clamp(16px, 3vw, 32px)",
+          padding: "0 clamp(12px, 3vw, 32px)",
           display: "flex",
           alignItems: "center",
-          gap: 16,
+          gap: 8,
           height: 60,
           position: "sticky",
           top: 0,
           zIndex: 50,
-          overflowX: "auto",
         }}
       >
+        {/* Brand — never hidden */}
         <div style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 18, letterSpacing: "0.06em", flexShrink: 0 }}>
           MLIK&apos;A <span style={{ color: "#6b6864", fontSize: 11 }}>ADMIN</span>
         </div>
 
-        <div style={{ display: "flex", gap: 4, flex: 1, minWidth: 0 }}>
+        {/* Tabs — scrollable, takes available space */}
+        <div style={{ flex: 1, minWidth: 0, overflowX: "auto", display: "flex", gap: 4, scrollbarWidth: "none" }}>
           {([
             { id: "reservations", label: "Réservations", badge: pending > 0 ? pending : null },
             { id: "fleet", label: "Flotte" },
             { id: "add-car", label: editingCarId ? "Modifier" : "Ajouter" },
+            { id: "settings", label: "⚙" },
           ] as const).map((t) => (
             <button
               key={t.id}
@@ -387,20 +417,12 @@ export default function AdminPage() {
                 alignItems: "center",
                 gap: 5,
                 whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {t.label}
               {"badge" in t && t.badge && (
-                <span
-                  style={{
-                    background: tab === t.id ? "#0a0a0a" : "#E11D2A",
-                    color: tab === t.id ? "#E11D2A" : "#0a0a0a",
-                    borderRadius: 999,
-                    padding: "1px 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                  }}
-                >
+                <span style={{ background: tab === t.id ? "#0a0a0a" : "#E11D2A", color: tab === t.id ? "#E11D2A" : "#0a0a0a", borderRadius: 999, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
                   {t.badge}
                 </span>
               )}
@@ -408,17 +430,19 @@ export default function AdminPage() {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+        {/* Actions — never hidden */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
           <button
             onClick={loadData}
             disabled={loadingData}
-            style={{ fontSize: 11, color: "#6b6864", textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer", whiteSpace: "nowrap" }}
+            style={{ fontSize: 14, color: "#6b6864", cursor: "pointer", lineHeight: 1 }}
+            title="Rafraîchir"
           >
-            {loadingData ? "..." : "↺"}
+            {loadingData ? "…" : "↺"}
           </button>
           <button
             onClick={() => setAuthed(false)}
-            style={{ fontSize: 11, color: "#6b6864", textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer", whiteSpace: "nowrap" }}
+            style={{ fontSize: 11, color: "#6b6864", textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer", whiteSpace: "nowrap", padding: "6px 10px", border: "1px solid #1b1b1b", borderRadius: 2 }}
           >
             Quitter
           </button>
@@ -796,6 +820,73 @@ export default function AdminPage() {
                   Annuler
                 </button>
               </div>
+            </form>
+          </div>
+        )}
+
+        {/* ── Settings tab ──────────────────────────────────────────────── */}
+        {tab === "settings" && (
+          <div style={{ maxWidth: 480 }}>
+            <div style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 22, marginBottom: 20 }}>
+              Paramètres
+            </div>
+
+            <form
+              onSubmit={changePassword}
+              style={{ background: "#121212", border: "1px solid #1b1b1b", borderRadius: 4, padding: "clamp(16px, 3vw, 28px)", display: "flex", flexDirection: "column", gap: 14 }}
+            >
+              <div style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 14, letterSpacing: "0.08em", color: "#a8a4a0", marginBottom: 4 }}>
+                CHANGER LE MOT DE PASSE
+              </div>
+
+              <div>
+                <label style={labelStyle}>Mot de passe actuel</label>
+                <input
+                  type="password"
+                  value={pwCurrent}
+                  onChange={(e) => setPwCurrent(e.target.value)}
+                  required
+                  style={inputStyle}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Nouveau mot de passe</label>
+                <input
+                  type="password"
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                  required
+                  minLength={4}
+                  style={inputStyle}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Confirmer le nouveau mot de passe</label>
+                <input
+                  type="password"
+                  value={pwConfirm}
+                  onChange={(e) => setPwConfirm(e.target.value)}
+                  required
+                  style={inputStyle}
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {pwMsg && (
+                <div style={{ background: pwMsg.ok ? "rgba(34,197,94,.1)" : "rgba(225,29,42,.1)", border: `1px solid ${pwMsg.ok ? "rgba(34,197,94,.3)" : "rgba(225,29,42,.3)"}`, borderRadius: 2, padding: "10px 14px", color: pwMsg.ok ? "#22c55e" : "#E11D2A", fontSize: 13 }}>
+                  {pwMsg.text}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={pwSaving}
+                style={{ background: "#E11D2A", color: "#0a0a0a", border: "none", borderRadius: 2, padding: "12px", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: pwSaving ? "wait" : "pointer" }}
+              >
+                {pwSaving ? "Sauvegarde..." : "Mettre à jour le mot de passe"}
+              </button>
             </form>
           </div>
         )}

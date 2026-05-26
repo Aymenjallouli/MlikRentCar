@@ -76,5 +76,21 @@
     "id": "res-1779758792610-69pbp",
     "status": "pending",
     "createdAt": "2026-05-26T01:26:32.611Z"
+  },
+  {
+    "carId": "car-1",
+    "userName": "Ahmed",
+    "userPhone": "24578534",
+    "userAge": 26,
+    "userPermisDate": "4 ans",
+    "pickupLocation": "Tunis-Carthage",
+    "returnLocation": "Tunis-Carthage",
+    "startDate": "2026-05-26",
+    "endDate": "2026-05-30",
+    "category": "all",
+    "originalPrice": 396,
+    "id": "res-1779760098085-vq4m2",
+    "status": "pending",
+    "createdAt": "2026-05-26T01:48:18.085Z"
   }
 ]
