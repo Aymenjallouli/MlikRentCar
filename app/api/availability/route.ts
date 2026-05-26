@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSuggestedCars, isCarAvailable, getCars } from "@/lib/db";
 
-// GET /api/availability?startDate=&endDate=&category=&carId=
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get("startDate") ?? "";
@@ -13,15 +12,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "startDate and endDate required" }, { status: 400 });
   }
 
-  // Single car check
   if (carId) {
-    const available = isCarAvailable(carId, startDate, endDate);
+    const available = await isCarAvailable(carId, startDate, endDate);
     return NextResponse.json({ carId, available });
   }
 
-  // Suggestions
-  const suggested = getSuggestedCars(startDate, endDate, category);
-  const all = getCars();
+  const suggested = await getSuggestedCars(startDate, endDate, category);
+  const all = await getCars();
 
   return NextResponse.json({
     available: suggested,

@@ -6,8 +6,10 @@ export async function GET(req: NextRequest) {
   if (req.headers.get("x-admin-token") !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const reservations = getReservations();
-  const enriched = reservations.map((r) => ({ ...r, car: getCarById(r.carId) }));
+  const reservations = await getReservations();
+  const enriched = await Promise.all(
+    reservations.map(async (r) => ({ ...r, car: await getCarById(r.carId) }))
+  );
   return NextResponse.json(enriched.reverse());
 }
 
@@ -28,20 +30,19 @@ export async function POST(req: NextRequest) {
   }
 
   if (carId && carId !== "any") {
-    const available = isCarAvailable(carId, startDate, endDate);
+    const available = await isCarAvailable(carId, startDate, endDate);
     if (!available) {
       return NextResponse.json({ error: "Ce véhicule n'est pas disponible pour ces dates" }, { status: 409 });
     }
   }
 
-  // Compute original price
-  const car = carId && carId !== "any" ? getCarById(carId) : undefined;
+  const car = carId && carId !== "any" ? await getCarById(carId) : undefined;
   const days = Math.max(1, Math.round(
     (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)
   ));
   const originalPrice = car ? car.pricePerDay * days : undefined;
 
-  const reservation = addReservation({
+  const reservation = await addReservation({
     carId: carId ?? "any",
     userName,
     userPhone,
@@ -57,16 +58,13 @@ export async function POST(req: NextRequest) {
     negotiationNote: negotiationNote || undefined,
   });
 
-  if (car) {
-    notifyTelegram(reservation, car).catch(() => {});
-  } else {
-    notifyTelegram(reservation, {
-      id: "any", brand: "Non spécifié", model: "", year: 0,
-      badge: category ?? "all", description: "", places: 0, boite: "",
-      conso: "", extra: "", pricePerDay: 0, available: true, featured: false,
-      image: "", category: "citadine", unavailableDates: [],
-    }).catch(() => {});
-  }
+  const notifyCar = car ?? {
+    id: "any", brand: "Non spécifié", model: "", year: 0,
+    badge: category ?? "all", description: "", places: 0, boite: "",
+    conso: "", extra: "", pricePerDay: 0, available: true, featured: false,
+    image: "", category: "citadine" as const, unavailableDates: [],
+  };
+  notifyTelegram(reservation, notifyCar).catch(() => {});
 
   return NextResponse.json({ ok: true, reservation }, { status: 201 });
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateReservationStatus, getReservations, getCarById } from "@/lib/db";
+import { updateReservationStatus, getReservations, getCarById, saveReservations } from "@/lib/db";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
@@ -27,13 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ ok: true });
-  }
+  try { body = await req.json(); } catch { return NextResponse.json({ ok: true }); }
 
-  // Handle text commands
   const message = body.message as Record<string, unknown> | undefined;
   if (message) {
     const text = (message.text as string) ?? "";
@@ -43,7 +38,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Handle inline button presses
   const cbq = body.callback_query as Record<string, unknown> | undefined;
   if (!cbq) return NextResponse.json({ ok: true });
 
@@ -59,16 +53,22 @@ export async function POST(req: NextRequest) {
   if (data.startsWith("confirm:") || data.startsWith("reject:")) {
     const [action, reservationId] = data.split(":");
     const status = action === "confirm" ? "confirmed" : "rejected";
-    const updated = updateReservationStatus(reservationId, status as "confirmed" | "rejected");
 
+    const updated = await updateReservationStatus(reservationId, status as "confirmed" | "rejected");
     if (!updated) {
       await answerCallback(cbqId, "Réservation introuvable.");
       return NextResponse.json({ ok: true });
     }
 
-    await answerCallback(cbqId, status === "confirmed" ? "✅ Confirmée !" : "❌ Rejetée.");
+    // Auto-delete rejected reservations
+    if (status === "rejected") {
+      const reservations = await getReservations();
+      await saveReservations(reservations.filter((r) => r.id !== reservationId));
+    }
 
-    const car = getCarById(updated.carId);
+    await answerCallback(cbqId, status === "confirmed" ? "✅ Confirmée !" : "❌ Rejetée et supprimée.");
+
+    const car = await getCarById(updated.carId);
     const carName = car ? `${car.brand} ${car.model}` : "Véhicule non précisé";
     const emoji = status === "confirmed" ? "✅" : "❌";
     const label = status === "confirmed" ? "CONFIRMÉE" : "REJETÉE";
@@ -87,26 +87,22 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleListReservations() {
-  const all = getReservations().reverse().slice(0, 10);
+  const all = (await getReservations()).reverse().slice(0, 10);
   if (all.length === 0) {
     await sendMessage("📋 *Aucune réservation pour l'instant.*");
     return;
   }
 
   const statusEmoji: Record<string, string> = {
-    pending: "⏳",
-    confirmed: "✅",
-    rejected: "❌",
-    cancelled: "🚫",
+    pending: "⏳", confirmed: "✅", rejected: "❌", cancelled: "🚫",
   };
 
   const lines = [`📋 *Dernières réservations (${all.length})*`, ``];
   for (const r of all) {
-    const car = getCarById(r.carId);
+    const car = await getCarById(r.carId);
     const carName = car ? `${car.brand} ${car.model}` : "Non précisé";
-    const emoji = statusEmoji[r.status] ?? "❓";
     lines.push(
-      `${emoji} *${r.userName}* — ${r.userPhone}`,
+      `${statusEmoji[r.status] ?? "❓"} *${r.userName}* — ${r.userPhone}`,
       `   🚘 ${carName} | 📅 ${r.startDate} → ${r.endDate}`,
       ``
     );
@@ -123,7 +119,6 @@ async function handleListReservations() {
   await sendMessage(lines.join("\n"), inline_keyboard.length ? { reply_markup: { inline_keyboard } } : undefined);
 }
 
-// GET: used to verify the webhook is reachable
 export async function GET() {
   return NextResponse.json({ ok: true, service: "mlika-telegram-webhook" });
 }

@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCars, saveCars, Car } from "@/lib/db";
 
-// GET /api/cars — public list
 export async function GET() {
-  return NextResponse.json(getCars());
+  return NextResponse.json(await getCars());
 }
 
-// POST /api/cars — admin: create new car
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("x-admin-token");
-  if (token !== process.env.ADMIN_SECRET) {
+  if (req.headers.get("x-admin-token") !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();
-  const cars = getCars();
+  const cars = await getCars();
   const newCar: Car = {
     id: `car-${Date.now()}`,
     badge: body.badge ?? "NOUVEAU",
@@ -33,6 +30,6 @@ export async function POST(req: NextRequest) {
     unavailableDates: body.unavailableDates ?? [],
   };
   cars.push(newCar);
-  saveCars(cars);
+  await saveCars(cars);
   return NextResponse.json(newCar, { status: 201 });
 }

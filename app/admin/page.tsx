@@ -219,6 +219,10 @@ export default function AdminPage() {
       headers,
       body: JSON.stringify({ status, adminNote, ...(finalPrice !== undefined ? { finalPrice } : {}) }),
     });
+    // Auto-delete rejected reservations
+    if (status === "rejected") {
+      await fetch(`/api/reservations/${id}`, { method: "DELETE", headers });
+    }
     await loadData();
   };
 
@@ -386,17 +390,17 @@ export default function AdminPage() {
           zIndex: 50,
         }}
       >
-        {/* Brand — never hidden */}
-        <div style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 18, letterSpacing: "0.06em", flexShrink: 0 }}>
+        {/* Brand — hidden on very small screens to save space */}
+        <div className="hidden sm:block" style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 18, letterSpacing: "0.06em", flexShrink: 0 }}>
           MLIK&apos;A <span style={{ color: "#6b6864", fontSize: 11 }}>ADMIN</span>
         </div>
 
-        {/* Tabs — scrollable, takes available space */}
-        <div style={{ flex: 1, minWidth: 0, overflowX: "auto", display: "flex", gap: 4, scrollbarWidth: "none" }}>
+        {/* Tabs — scrollable, takes all available space */}
+        <div style={{ flex: 1, minWidth: 0, overflowX: "auto", display: "flex", gap: 4, scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
           {([
-            { id: "reservations", label: "Réservations", badge: pending > 0 ? pending : null },
+            { id: "reservations", label: "Résas", badge: pending > 0 ? pending : null },
             { id: "fleet", label: "Flotte" },
-            { id: "add-car", label: editingCarId ? "Modifier" : "Ajouter" },
+            { id: "add-car", label: editingCarId ? "Modifier" : "+" },
             { id: "settings", label: "⚙" },
           ] as const).map((t) => (
             <button
