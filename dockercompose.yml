@@ -1,0 +1,9 @@
+version: '3'
+services:
+  mlika-rental:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - env=prod
+ 
