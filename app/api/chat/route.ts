@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No messages" }, { status: 400 });
   }
 
-  const cars = getCars();
+  const cars = await getCars();
   const carsInfo = cars
     .map(
       (c) =>
