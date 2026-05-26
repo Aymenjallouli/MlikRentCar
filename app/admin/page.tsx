@@ -124,6 +124,7 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [token, setToken] = useState("");
   const [tab, setTab] = useState<Tab>("reservations");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Data
   const [reservations, setReservations] = useState<ReservationWithCar[]>([]);
@@ -373,81 +374,77 @@ export default function AdminPage() {
   };
   const labelStyle = { fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" as const, color: "#6b6864", display: "block", marginBottom: 6 };
 
+  const tabs = [
+    { id: "reservations" as const, label: "Réservations", badge: pending > 0 ? pending : null },
+    { id: "fleet" as const, label: "Flotte", badge: null },
+    { id: "add-car" as const, label: editingCarId ? "Modifier" : "Ajouter", badge: null },
+    { id: "settings" as const, label: "Paramètres", badge: null },
+  ];
+
   return (
     <div style={{ minHeight: "100vh", background: "#0c0c0c" }}>
-      {/* Top bar — brand fixed left | tabs scrollable | actions fixed right */}
-      <div
-        style={{
-          background: "#050505",
-          borderBottom: "1px solid #1b1b1b",
-          padding: "0 clamp(12px, 3vw, 32px)",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          height: 60,
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-        }}
-      >
-        {/* Brand — hidden on very small screens to save space */}
-        <div className="hidden sm:block" style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 18, letterSpacing: "0.06em", flexShrink: 0 }}>
-          MLIK&apos;A <span style={{ color: "#6b6864", fontSize: 11 }}>ADMIN</span>
+
+      {/* ── Top bar ── */}
+      <div style={{ background: "#050505", borderBottom: "1px solid #1b1b1b", padding: "0 clamp(16px, 3vw, 32px)", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60, position: "sticky", top: 0, zIndex: 50 }}>
+
+        {/* Brand */}
+        <div style={{ fontFamily: "var(--font-anton, Anton)", fontSize: 18, letterSpacing: "0.06em" }}>
+          WELD&apos;L <span style={{ color: "#6b6864", fontSize: 11 }}>9AHBA</span>
         </div>
 
-        {/* Tabs — scrollable, takes all available space */}
-        <div style={{ flex: 1, minWidth: 0, overflowX: "auto", display: "flex", gap: 4, scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
-          {([
-            { id: "reservations", label: "Réservations", badge: pending > 0 ? pending : null },
-            { id: "fleet", label: "Flotte" },
-            { id: "add-car", label: editingCarId ? "Modifier" : "Ajouter" },
-            { id: "settings", label: "⚙" },
-          ] as const).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{
-                padding: "6px clamp(6px, 2vw, 12px)",
-                background: tab === t.id ? "#E11D2A" : "transparent",
-                color: tab === t.id ? "#0a0a0a" : "#a8a4a0",
-                border: tab === t.id ? "none" : "1px solid #232323",
-                borderRadius: 2,
-                fontSize: "clamp(10px, 2vw, 11px)",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
+        {/* Desktop tabs — hidden on mobile */}
+        <div className="hidden lg:flex" style={{ gap: 4 }}>
+          {tabs.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "6px 14px", background: tab === t.id ? "#E11D2A" : "transparent", color: tab === t.id ? "#0a0a0a" : "#a8a4a0", border: tab === t.id ? "none" : "1px solid #232323", borderRadius: 2, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
               {t.label}
-              {"badge" in t && t.badge && (
-                <span style={{ background: tab === t.id ? "#0a0a0a" : "#E11D2A", color: tab === t.id ? "#E11D2A" : "#0a0a0a", borderRadius: 999, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
-                  {t.badge}
-                </span>
-              )}
+              {t.badge && <span style={{ background: tab === t.id ? "#0a0a0a" : "#E11D2A", color: tab === t.id ? "#E11D2A" : "#0a0a0a", borderRadius: 999, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>{t.badge}</span>}
             </button>
           ))}
         </div>
 
-        {/* Actions — never hidden */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+        {/* Desktop actions */}
+        <div className="hidden lg:flex" style={{ gap: 8, alignItems: "center" }}>
+          <button onClick={loadData} disabled={loadingData} style={{ fontSize: 14, color: "#6b6864", cursor: "pointer" }}>{loadingData ? "…" : "↺"}</button>
+          <button onClick={() => setAuthed(false)} style={{ fontSize: 11, color: "#6b6864", textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer", padding: "6px 10px", border: "1px solid #1b1b1b", borderRadius: 2 }}>Quitter</button>
+        </div>
+
+        {/* Mobile right: pending badge + hamburger */}
+        <div className="lg:hidden" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {pending > 0 && (
+            <span style={{ background: "#E11D2A", color: "#0a0a0a", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{pending}</span>
+          )}
           <button
-            onClick={loadData}
-            disabled={loadingData}
-            style={{ fontSize: 14, color: "#6b6864", cursor: "pointer", lineHeight: 1 }}
-            title="Rafraîchir"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Menu"
+            style={{ width: 44, height: 44, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5 }}
           >
-            {loadingData ? "…" : "↺"}
+            <span style={{ display: "block", width: 22, height: 1.5, background: "#f5f3ef", borderRadius: 1, transition: "all 0.25s", transform: menuOpen ? "translateY(6.5px) rotate(45deg)" : "none" }} />
+            <span style={{ display: "block", width: 22, height: 1.5, background: "#f5f3ef", borderRadius: 1, transition: "all 0.25s", opacity: menuOpen ? 0 : 1 }} />
+            <span style={{ display: "block", width: 22, height: 1.5, background: "#f5f3ef", borderRadius: 1, transition: "all 0.25s", transform: menuOpen ? "translateY(-6.5px) rotate(-45deg)" : "none" }} />
           </button>
+        </div>
+      </div>
+
+      {/* ── Mobile drawer ── */}
+      <div
+        className="lg:hidden"
+        style={{ position: "fixed", inset: 0, zIndex: 40, background: "rgba(5,5,5,0.97)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", transform: menuOpen ? "translateX(0)" : "translateX(100%)", transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)", paddingTop: 80, paddingLeft: 32, paddingRight: 32, paddingBottom: 40, display: "flex", flexDirection: "column" }}
+      >
+        {tabs.map((t, i) => (
           <button
-            onClick={() => setAuthed(false)}
-            style={{ fontSize: 11, color: "#6b6864", textTransform: "uppercase", letterSpacing: "0.12em", cursor: "pointer", whiteSpace: "nowrap", padding: "6px 10px", border: "1px solid #1b1b1b", borderRadius: 2 }}
+            key={t.id}
+            onClick={() => { setTab(t.id); setMenuOpen(false); }}
+            style={{ fontFamily: "var(--font-anton, Anton)", fontSize: "clamp(32px, 9vw, 48px)", letterSpacing: "0.04em", textTransform: "uppercase", color: tab === t.id ? "#f5f3ef" : "#a8a4a0", padding: "14px 0", borderBottom: i < tabs.length - 1 ? "1px solid #1b1b1b" : "none", textAlign: "left", display: "flex", alignItems: "center", gap: 14 }}
           >
+            {t.label}
+            {t.badge && <span style={{ background: "#E11D2A", color: "#0a0a0a", borderRadius: 999, padding: "2px 10px", fontSize: 14, fontWeight: 700 }}>{t.badge}</span>}
+          </button>
+        ))}
+        <div style={{ marginTop: 32, display: "flex", gap: 10 }}>
+          <button onClick={() => { loadData(); setMenuOpen(false); }} style={{ flex: 1, padding: "14px", background: "transparent", color: "#a8a4a0", border: "1px solid #232323", borderRadius: 2, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
+            ↺ Rafraîchir
+          </button>
+          <button onClick={() => setAuthed(false)} style={{ flex: 1, padding: "14px", background: "rgba(225,29,42,.1)", color: "#E11D2A", border: "1px solid rgba(225,29,42,.3)", borderRadius: 2, fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer" }}>
             Quitter
           </button>
         </div>
