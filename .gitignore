@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vercel duplicate
+.vercel
+
+# runtime data (not suitable for git — use a DB or persistent storage in prod)
+# data/
