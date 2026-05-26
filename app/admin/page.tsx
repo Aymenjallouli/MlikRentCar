@@ -398,28 +398,28 @@ export default function AdminPage() {
         {/* Tabs — scrollable, takes all available space */}
         <div style={{ flex: 1, minWidth: 0, overflowX: "auto", display: "flex", gap: 4, scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
           {([
-            { id: "reservations", label: "Résas", badge: pending > 0 ? pending : null },
+            { id: "reservations", label: "Réservations", badge: pending > 0 ? pending : null },
             { id: "fleet", label: "Flotte" },
-            { id: "add-car", label: editingCarId ? "Modifier" : "+" },
+            { id: "add-car", label: editingCarId ? "Modifier" : "Ajouter" },
             { id: "settings", label: "⚙" },
           ] as const).map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               style={{
-                padding: "6px 12px",
+                padding: "6px clamp(6px, 2vw, 12px)",
                 background: tab === t.id ? "#E11D2A" : "transparent",
                 color: tab === t.id ? "#0a0a0a" : "#a8a4a0",
                 border: tab === t.id ? "none" : "1px solid #232323",
                 borderRadius: 2,
-                fontSize: 11,
+                fontSize: "clamp(10px, 2vw, 11px)",
                 fontWeight: 600,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                gap: 5,
+                gap: 4,
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
